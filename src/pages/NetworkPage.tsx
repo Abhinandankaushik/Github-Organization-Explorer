@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, Search, X, Maximize } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { useAppStore } from '@/store/app-store';
 
 const LANG_COLORS: Record<string, string> = {
@@ -40,13 +41,26 @@ export default function NetworkPage() {
   const [mouseScreen, setMouseScreen] = useState<Vec2>({ x: 0, y: 0 });
   const hoveredRef = useRef<GraphNode | null>(null);
 
-  // Build graph data
+  // Filter state
+  const [minContributors, setMinContributors] = useState(1);
+  const [minRepos, setMinRepos] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [maxContributorsShow, setMaxContributorsShow] = useState(Math.min(50, allContributors.length));
+
+  // Build graph data with filters
   const { nodeCount, edgeCount } = useMemo(() => {
     const nodes = new Map<string, GraphNode>();
     const edges: Edge[] = [];
     const cx = 600, cy = 400;
 
-    // ALL repos
+    // Count repos per contributor for filtering
+    const contribRepoCount = new Map<string, number>();
+    contributors.forEach(contribs => {
+      contribs.forEach(c => contribRepoCount.set(c.login, (contribRepoCount.get(c.login) || 0) + 1));
+    });
+
+    // Filter and add repos
     repos.forEach((r, i) => {
       const angle = (i / Math.max(1, repos.length)) * Math.PI * 2;
       const radius = 200 + Math.random() * 150;
@@ -60,14 +74,18 @@ export default function NetworkPage() {
       });
     });
 
-    // ALL contributors
-    const contribRepoCount = new Map<string, number>();
-    contributors.forEach(contribs => {
-      contribs.forEach(c => contribRepoCount.set(c.login, (contribRepoCount.get(c.login) || 0) + 1));
-    });
+    // Filter and add contributors
+    const filteredContributors = allContributors
+      .filter(c => {
+        const repoCount = contribRepoCount.get(c.login) || 1;
+        const meetsRepoFilter = repoCount >= minRepos;
+        const meetsContribFilter = c.contributions >= minContributors;
+        return meetsRepoFilter && meetsContribFilter;
+      })
+      .slice(0, maxContributorsShow);
 
-    allContributors.forEach((c, i) => {
-      const angle = (i / Math.max(1, allContributors.length)) * Math.PI * 2;
+    filteredContributors.forEach((c, i) => {
+      const angle = (i / Math.max(1, filteredContributors.length)) * Math.PI * 2;
       const radius = 400 + Math.random() * 100;
       nodes.set(`user-${c.login}`, {
         id: `user-${c.login}`, name: c.login, type: 'contributor',
@@ -79,7 +97,7 @@ export default function NetworkPage() {
       });
     });
 
-    // Edges
+    // Edges only for nodes that passed filters
     let colorIdx = 0;
     contributors.forEach((contribs, repoName) => {
       contribs.forEach(c => {
@@ -92,7 +110,14 @@ export default function NetworkPage() {
     nodesRef.current = nodes;
     edgesRef.current = edges;
     return { nodeCount: nodes.size, edgeCount: edges.length };
-  }, [repos, contributors, allContributors]);
+  }, [repos, contributors, allContributors, minContributors, minRepos, maxContributorsShow]);
+
+  // Helper function to check if node matches search
+  const matchesSearch = useCallback((node: GraphNode): boolean => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return node.name.toLowerCase().includes(query);
+  }, [searchQuery]);
 
   // Simple force simulation
   useEffect(() => {
@@ -219,6 +244,9 @@ export default function NetworkPage() {
         const to = nodes.get(edge.to);
         if (!from || !to) return;
         const isHighlighted = hovered ? hoveredEdgeSet.has(i) : false;
+        const fromMatches = matchesSearch(from);
+        const toMatches = matchesSearch(to);
+        const edgeMatches = fromMatches || toMatches;
         const normalizedW = edge.weight / maxEdgeWeight;
         const lineWidth = 0.5 + normalizedW * 3;
 
@@ -226,8 +254,14 @@ export default function NetworkPage() {
         ctx.moveTo(from.x, from.y);
         ctx.lineTo(to.x, to.y);
         ctx.strokeStyle = EDGE_COLORS[edge.colorIdx];
-        ctx.globalAlpha = hovered ? (isHighlighted ? 0.7 : 0.04) : 0.12 + normalizedW * 0.2;
-        ctx.lineWidth = isHighlighted ? lineWidth + 1 : lineWidth;
+
+        if (searchQuery) {
+          ctx.globalAlpha = edgeMatches ? (isHighlighted ? 0.9 : 0.55 + normalizedW * 0.35) : 0.02;
+        } else {
+          ctx.globalAlpha = hovered ? (isHighlighted ? 0.7 : 0.04) : 0.12 + normalizedW * 0.2;
+        }
+        
+        ctx.lineWidth = edgeMatches && searchQuery ? lineWidth + 1.5 : (isHighlighted ? lineWidth + 1 : lineWidth);
         ctx.stroke();
         ctx.globalAlpha = 1;
       });
@@ -239,33 +273,34 @@ export default function NetworkPage() {
       nodes.forEach(node => {
         const isHovered = hovered?.id === node.id;
         const isConnected = hovered ? hoveredEdgeSet.size > 0 && edges.some((e, i) => hoveredEdgeSet.has(i) && (e.from === node.id || e.to === node.id)) : false;
-        const dimmed = hovered && !isHovered && !isConnected;
+        const searchMatches = matchesSearch(node);
+        const dimmed = searchQuery ? !searchMatches : (hovered && !isHovered && !isConnected);
 
-        ctx.globalAlpha = dimmed ? 0.15 : 1;
+        ctx.globalAlpha = dimmed ? (searchQuery ? 0.12 : 0.15) : 1;
 
         if (node.type === 'repo') {
           const repoNode = node as RepoNode;
           const size = 8 + (repoNode.stars / maxStars) * 14;
           const color = LANG_COLORS[repoNode.language || ''] || '#a78bfa';
 
-          if (isHovered) {
-            ctx.shadowColor = color;
-            ctx.shadowBlur = 15;
+          if ((isHovered && !searchQuery) || (searchQuery && searchMatches)) {
+            ctx.shadowColor = searchQuery && searchMatches ? '#fbbf24' : color;
+            ctx.shadowBlur = searchQuery && searchMatches ? 20 : 15;
           }
 
           ctx.fillStyle = color;
-          ctx.globalAlpha = dimmed ? 0.1 : isHovered ? 0.95 : 0.7;
+          ctx.globalAlpha = dimmed ? (searchQuery ? 0.08 : 0.1) : (searchQuery && searchMatches ? 0.95 : (isHovered && !searchQuery ? 0.95 : 0.7));
           ctx.fillRect(node.x - size, node.y - size, size * 2, size * 2);
-          ctx.strokeStyle = color;
-          ctx.lineWidth = isHovered ? 2.5 : 1;
+          ctx.strokeStyle = searchQuery && searchMatches ? '#fbbf24' : color;
+          ctx.lineWidth = (isHovered || (searchQuery && searchMatches)) ? 3 : 1;
           ctx.strokeRect(node.x - size, node.y - size, size * 2, size * 2);
 
           ctx.shadowColor = 'transparent';
           ctx.shadowBlur = 0;
 
           // Label
-          ctx.globalAlpha = dimmed ? 0.1 : 0.8;
-          ctx.fillStyle = '#e2e8f0';
+          ctx.globalAlpha = dimmed ? (searchQuery ? 0.08 : 0.1) : (searchQuery && searchMatches ? 1 : (isHovered && !searchQuery ? 1 : 0.8));
+          ctx.fillStyle = searchQuery && searchMatches ? '#fbbf24' : '#e2e8f0';
           ctx.font = '9px Inter, sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText(node.name.length > 14 ? node.name.slice(0, 14) + '…' : node.name, node.x, node.y + size + 12);
@@ -273,13 +308,18 @@ export default function NetworkPage() {
           const contribNode = node as ContribNode;
           const size = 6 + (contribNode.contributions / maxContrib) * 12;
 
-          if (isHovered) {
+          if (isHovered && !searchQuery) {
             ctx.shadowColor = '#a78bfa';
             ctx.shadowBlur = 15;
           }
 
           // Draw avatar circle
           const img = loadImage(contribNode.avatar);
+          if ((isHovered && !searchQuery) || (searchQuery && searchMatches)) {
+            ctx.shadowColor = searchQuery && searchMatches ? '#fbbf24' : '#a78bfa';
+            ctx.shadowBlur = searchQuery && searchMatches ? 20 : 15;
+          }
+          
           if (img.complete && img.naturalWidth > 0) {
             ctx.save();
             ctx.beginPath();
@@ -289,17 +329,17 @@ export default function NetworkPage() {
             ctx.restore();
             ctx.beginPath();
             ctx.arc(node.x, node.y, size, 0, Math.PI * 2);
-            ctx.strokeStyle = isHovered ? '#a78bfa' : '#6366f1';
-            ctx.lineWidth = isHovered ? 2.5 : 1;
+            ctx.strokeStyle = searchQuery && searchMatches ? '#fbbf24' : (isHovered ? '#a78bfa' : '#6366f1');
+            ctx.lineWidth = (isHovered || (searchQuery && searchMatches)) ? 3 : 1;
             ctx.stroke();
           } else {
             ctx.beginPath();
             ctx.arc(node.x, node.y, size, 0, Math.PI * 2);
             ctx.fillStyle = '#a78bfa';
-            ctx.globalAlpha = dimmed ? 0.1 : isHovered ? 0.85 : 0.6;
+            ctx.globalAlpha = dimmed ? (searchQuery ? 0.08 : 0.1) : (searchQuery && searchMatches ? 0.9 : (isHovered ? 0.85 : 0.6));
             ctx.fill();
-            ctx.strokeStyle = '#a78bfa';
-            ctx.lineWidth = isHovered ? 2 : 1;
+            ctx.strokeStyle = searchQuery && searchMatches ? '#fbbf24' : (isHovered ? '#a78bfa' : '#6366f1');
+            ctx.lineWidth = (isHovered || (searchQuery && searchMatches)) ? 3 : 1;
             ctx.stroke();
           }
 
@@ -307,8 +347,8 @@ export default function NetworkPage() {
           ctx.shadowBlur = 0;
 
           // Label
-          ctx.globalAlpha = dimmed ? 0.1 : 0.7;
-          ctx.fillStyle = '#e2e8f0';
+          ctx.globalAlpha = dimmed ? (searchQuery ? 0.08 : 0.12) : (searchQuery && searchMatches ? 1 : 0.85);
+          ctx.fillStyle = searchQuery && searchMatches ? '#fbbf24' : '#e2e8f0';
           ctx.font = '8px Inter, sans-serif';
           ctx.textAlign = 'center';
           ctx.fillText(node.name.length > 12 ? node.name.slice(0, 12) + '…' : node.name, node.x, node.y + size + 11);
@@ -322,7 +362,7 @@ export default function NetworkPage() {
 
     animRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animRef.current);
-  }, [nodeCount, edgeCount]);
+  }, [nodeCount, edgeCount, searchQuery, matchesSearch]);
 
   // Screen to world coords
   const screenToWorld = useCallback((sx: number, sy: number): Vec2 => {
@@ -409,13 +449,32 @@ export default function NetworkPage() {
 
   const resetView = useCallback(() => setCamera({ x: 0, y: 0, zoom: 1 }), []);
 
+  const toggleFullscreen = useCallback(async () => {
+    if (!containerRef.current) return;
+    try {
+      if (!isFullscreen) {
+        if (containerRef.current.requestFullscreen) {
+          await containerRef.current.requestFullscreen();
+          setIsFullscreen(true);
+        }
+      } else {
+        if (document.fullscreenElement) {
+          await document.exitFullscreen();
+          setIsFullscreen(false);
+        }
+      }
+    } catch (err) {
+      console.error('Fullscreen error:', err);
+    }
+  }, [isFullscreen]);
+
   return (
     <div className="space-y-4">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Network Graph</h2>
           <p className="text-sm text-muted-foreground">
-            {repos.length} repos · {allContributors.length} contributors · {edgesRef.current.length} connections — scroll to zoom, drag to pan/move nodes
+            {nodeCount} nodes · {edgeCount} connections — scroll to zoom, drag to pan/move nodes
           </p>
         </div>
         <div className="flex gap-1">
@@ -431,6 +490,83 @@ export default function NetworkPage() {
             className="p-2 rounded-lg bg-surface-card border border-border hover:border-primary/30 text-muted-foreground hover:text-foreground transition-all">
             <Maximize2 className="w-4 h-4" />
           </button>
+          <button onClick={toggleFullscreen}
+            className="p-2 rounded-lg bg-surface-card border border-border hover:border-primary/30 text-muted-foreground hover:text-foreground transition-all">
+            <Maximize className="w-4 h-4" />
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Filters & Search */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-surface-card border border-border rounded-xl p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Search Bar */}
+          <div className="lg:col-span-2 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Input
+              type="text"
+              placeholder="Search repos or contributors..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Min Contributions Filter */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-foreground">Min Contributions</label>
+              <span className="text-xs text-muted-foreground font-mono">{minContributors}</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max={Math.max(50, Math.max(...allContributors.map(c => c.contributions)))}
+              value={minContributors}
+              onChange={(e) => setMinContributors(parseInt(e.target.value))}
+              className="w-full h-2 bg-surface-overlay rounded-lg appearance-none cursor-pointer accent-primary"
+            />
+          </div>
+
+          {/* Min Repos Filter */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-foreground">Min Repos</label>
+              <span className="text-xs text-muted-foreground font-mono">{minRepos}</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max={repos.length}
+              value={minRepos}
+              onChange={(e) => setMinRepos(parseInt(e.target.value))}
+              className="w-full h-2 bg-surface-overlay rounded-lg appearance-none cursor-pointer accent-primary"
+            />
+          </div>
+
+          {/* Max Contributors to Show */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-foreground">Show Contributors</label>
+              <span className="text-xs text-muted-foreground font-mono">{maxContributorsShow}</span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max={allContributors.length}
+              value={maxContributorsShow}
+              onChange={(e) => setMaxContributorsShow(parseInt(e.target.value))}
+              className="w-full h-2 bg-surface-overlay rounded-lg appearance-none cursor-pointer accent-primary"
+            />
+          </div>
         </div>
       </motion.div>
 
@@ -441,7 +577,7 @@ export default function NetworkPage() {
         ref={containerRef}
         className="bg-surface-card border border-border rounded-xl overflow-hidden relative"
         style={{
-          height: 'calc(100vh - 220px)',
+          height: isFullscreen ? '100vh' : 'calc(100vh - 360px)',
           minHeight: '420px',
           cursor: dragRef.current.nodeId ? 'grabbing' : dragRef.current.isPan ? 'move' : 'default',
         }}
@@ -497,11 +633,35 @@ export default function NetworkPage() {
           </div>
         )}
 
-        {/* Bottom legend - minimal */}
-        <div className="absolute bottom-3 left-3 flex items-center gap-4 text-[10px] text-muted-foreground bg-surface-card/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-border">
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-primary/70" /> Repos</div>
-          <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-primary/60" /> Contributors</div>
-          <span>Edge width = contributions</span>
+        {/* Bottom legend - stats */}
+        <div className="absolute bottom-3 left-3 text-[10px] text-muted-foreground bg-surface-card/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-border">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-sm bg-primary/70" /> Repos</div>
+            <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-primary/60" /> Contributors</div>
+            <span>Edge width = contributions</span>
+            {searchQuery && (
+              <span className="text-xs ml-2 px-2 py-1 rounded bg-primary/10 text-primary">Filtered by: "{searchQuery}"</span>
+            )}
+          </div>
+        </div>
+
+        {/* Stats panel */}
+        <div className="absolute top-3 right-3 text-[11px] text-muted-foreground bg-surface-card/80 backdrop-blur-sm rounded-lg px-4 py-3 border border-border space-y-1">
+          <div className="font-semibold text-foreground mb-2">Graph Stats</div>
+          <div className="space-y-1">
+            <div className="flex justify-between gap-4">
+              <span>Repos:</span>
+              <span className="font-mono text-primary font-semibold">{nodeCount <= allContributors.length ? nodeCount : Math.max(0, nodeCount - allContributors.length)}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span>Contributors:</span>
+              <span className="font-mono text-primary font-semibold">{nodeCount > repos.length ? nodeCount - repos.length : 0}</span>
+            </div>
+            <div className="flex justify-between gap-4">
+              <span>Connections:</span>
+              <span className="font-mono text-info font-semibold">{edgeCount}</span>
+            </div>
+          </div>
         </div>
       </motion.div>
     </div>

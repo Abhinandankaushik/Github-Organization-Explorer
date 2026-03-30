@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { GitFork, Users, Star, AlertCircle, Activity, TrendingUp, GitPullRequest, Heart, AlertTriangle, Scale, Shield, Clock, Zap } from 'lucide-react';
+import { GitFork, Users, Star, AlertCircle, Activity, TrendingUp, GitPullRequest, Heart, AlertTriangle, Scale, Shield, Clock, Zap, GitCommit, Gift, Tag } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import SkeletonCard from '@/components/shared/SkeletonCard';
 import ActivityHeatmap from '@/components/dashboard/ActivityHeatmap';
@@ -612,9 +612,13 @@ export default function ComparisonPage() {
                       className="p-2 rounded bg-surface-page/50 border border-border/30 hover:border-primary/30 transition-colors text-xs"
                     >
                       <div className="flex items-start gap-2">
-                        <span className="text-lg mt-0.5">
-                          {event.type === 'PushEvent' ? '📤' : event.type === 'PullRequestEvent' ? '🔀' : event.type === 'IssuesEvent' ? '⚠️' : event.type === 'ReleaseEvent' ? '🎉' : '📌'}
-                        </span>
+                        <div className="text-foreground mt-0.5 text-primary">
+                          {event.type === 'PushEvent' && <GitCommit className="w-4 h-4" />}
+                          {event.type === 'PullRequestEvent' && <GitPullRequest className="w-4 h-4" />}
+                          {event.type === 'IssuesEvent' && <AlertCircle className="w-4 h-4" />}
+                          {event.type === 'ReleaseEvent' && <Gift className="w-4 h-4" />}
+                          {!['PushEvent', 'PullRequestEvent', 'IssuesEvent', 'ReleaseEvent'].includes(event.type) && <Tag className="w-4 h-4" />}
+                        </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-muted-foreground truncate">
                             {event.actor.login}
