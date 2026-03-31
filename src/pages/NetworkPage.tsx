@@ -23,7 +23,7 @@ type GraphNode = RepoNode | ContribNode;
 interface Edge { from: string; to: string; weight: number; repoName: string; colorIdx: number }
 
 export default function NetworkPage() {
-  const { repos, contributors, allContributors } = useAppStore();
+  const { repos, contributors, allContributors, isLoading } = useAppStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
@@ -536,6 +536,30 @@ export default function NetworkPage() {
       console.error('Fullscreen error:', err);
     }
   }, [isFullscreen]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3 sm:space-y-4">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="animate-pulse">
+          <div className="h-6 w-32 shimmer rounded mb-2" />
+          <div className="h-4 w-48 shimmer rounded" />
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-surface-card border border-border rounded-xl p-2 sm:p-4 animate-pulse">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (<div key={i} className="space-y-2"><div className="h-4 w-20 shimmer rounded" /><div className="h-8 w-full shimmer rounded" /></div>))}
+          </div>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-surface-card border border-border rounded-xl overflow-hidden relative animate-pulse" style={{ height: 'calc(100vh - 320px)', minHeight: '250px' }}>
+          <div className="absolute inset-0 flex items-center justify-center bg-surface-card/50">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 rounded-full shimmer mx-auto" />
+              <div className="h-4 w-40 shimmer rounded mx-auto" />
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3 sm:space-y-4">

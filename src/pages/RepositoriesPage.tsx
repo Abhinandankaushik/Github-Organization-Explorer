@@ -12,7 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 type SortKey = 'pushed_at' | 'stargazers_count' | 'forks_count' | 'open_issues_count' | 'name';
 
 export default function RepositoriesPage() {
-  const { repos, healthScores, languages } = useAppStore();
+  const { repos, healthScores, languages, isLoading } = useAppStore();
   const navigate = useNavigate();
   
   const [search, setSearch] = useState('');
@@ -119,46 +119,60 @@ export default function RepositoriesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((repo, i) => {
-                const health = healthScores.get(repo.id);
-                return (
-                  <motion.tr
-                    key={repo.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: Math.min(i * 0.02, 0.5) }}
-                    className="border-b border-border/50 hover:bg-accent/40 transition-colors cursor-pointer group"
-                    onClick={() => navigate(`/repo/${repo.name}`)}
-                  >
-                    <td className="p-2 sm:p-3">
-                      {health && <HealthBadge grade={health.grade} score={health.total} />}
-                    </td>
-                    <td className="p-2 sm:p-3 min-w-0">
-                      <div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs sm:text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">{repo.name}</span>
-                          {repo.archived && <span className="text-[9px] px-1 py-0 rounded bg-muted text-muted-foreground whitespace-nowrap flex-shrink-0">Archived</span>}
-                          {repo.fork && <span className="text-[9px] px-1 py-0 rounded bg-info/10 text-info whitespace-nowrap flex-shrink-0">Fork</span>}
+              {isLoading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={`skeleton-${i}`} className="border-b border-border/50 animate-pulse">
+                    <td className="p-2 sm:p-3"><div className="w-8 h-6 rounded shimmer"></div></td>
+                    <td className="p-2 sm:p-3"><div className="space-y-2"><div className="h-4 w-32 rounded shimmer"></div><div className="h-3 w-48 rounded shimmer"></div></div></td>
+                    <td className="hidden sm:table-cell p-2 sm:p-3"><div className="h-4 w-16 rounded shimmer"></div></td>
+                    <td className="hidden md:table-cell p-2 sm:p-3 text-right"><div className="h-4 w-12 rounded shimmer ml-auto"></div></td>
+                    <td className="hidden lg:table-cell p-2 sm:p-3 text-right"><div className="h-4 w-12 rounded shimmer ml-auto"></div></td>
+                    <td className="hidden 2xl:table-cell p-2 sm:p-3 text-right"><div className="h-4 w-12 rounded shimmer ml-auto"></div></td>
+                    <td className="p-2 sm:p-3 text-right"><div className="h-4 w-16 rounded shimmer ml-auto"></div></td>
+                  </tr>
+                ))
+              ) : (
+                filtered.map((repo, i) => {
+                  const health = healthScores.get(repo.id);
+                  return (
+                    <motion.tr
+                      key={repo.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: Math.min(i * 0.02, 0.5) }}
+                      className="border-b border-border/50 hover:bg-accent/40 transition-colors cursor-pointer group"
+                      onClick={() => navigate(`/repo/${repo.name}`)}
+                    >
+                      <td className="p-2 sm:p-3">
+                        {health && <HealthBadge grade={health.grade} score={health.total} />}
+                      </td>
+                      <td className="p-2 sm:p-3 min-w-0">
+                        <div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs sm:text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate">{repo.name}</span>
+                            {repo.archived && <span className="text-[9px] px-1 py-0 rounded bg-muted text-muted-foreground whitespace-nowrap flex-shrink-0">Archived</span>}
+                            {repo.fork && <span className="text-[9px] px-1 py-0 rounded bg-info/10 text-info whitespace-nowrap flex-shrink-0">Fork</span>}
+                          </div>
+                          {repo.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{repo.description}</p>
+                          )}
                         </div>
-                        {repo.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{repo.description}</p>
+                      </td>
+                      <td className="hidden sm:table-cell p-2 sm:p-3">
+                        {repo.language && (
+                          <span className="text-xs font-mono text-muted-foreground">{repo.language}</span>
                         )}
-                      </div>
-                    </td>
-                    <td className="hidden sm:table-cell p-2 sm:p-3">
-                      {repo.language && (
-                        <span className="text-xs font-mono text-muted-foreground">{repo.language}</span>
-                      )}
-                    </td>
-                    <td className="hidden md:table-cell p-2 sm:p-3 text-right text-xs font-mono text-foreground">{repo.stargazers_count.toLocaleString()}</td>
-                    <td className="hidden lg:table-cell p-2 sm:p-3 text-right text-xs font-mono text-foreground">{repo.forks_count.toLocaleString()}</td>
-                    <td className="hidden 2xl:table-cell p-2 sm:p-3 text-right text-xs font-mono text-foreground">{repo.open_issues_count.toLocaleString()}</td>
-                    <td className="p-2 sm:p-3 text-right text-xs text-muted-foreground">
-                      <span className="block lg:inline">{formatDistanceToNow(new Date(repo.pushed_at), { addSuffix: false })}</span>
-                    </td>
-                  </motion.tr>
-                );
-              })}
+                      </td>
+                      <td className="hidden md:table-cell p-2 sm:p-3 text-right text-xs font-mono text-foreground">{repo.stargazers_count.toLocaleString()}</td>
+                      <td className="hidden lg:table-cell p-2 sm:p-3 text-right text-xs font-mono text-foreground">{repo.forks_count.toLocaleString()}</td>
+                      <td className="hidden 2xl:table-cell p-2 sm:p-3 text-right text-xs font-mono text-foreground">{repo.open_issues_count.toLocaleString()}</td>
+                      <td className="p-2 sm:p-3 text-right text-xs text-muted-foreground">
+                        <span className="block lg:inline">{formatDistanceToNow(new Date(repo.pushed_at), { addSuffix: false })}</span>
+                      </td>
+                    </motion.tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

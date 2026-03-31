@@ -27,7 +27,7 @@ const PIE_COLORS = [
 ];
 
 export default function AnalyticsPage() {
-  const { repos, allContributors, events, healthScores, contributors, orgName } = useAppStore();
+  const { repos, allContributors, events, healthScores, contributors, orgName, isLoading } = useAppStore();
 
   // ========== 1. HIGH-LEVEL ORG OVERVIEW ==========
   const orgOverview = useMemo(() => {
@@ -316,6 +316,34 @@ export default function AnalyticsPage() {
       {sub && <p className="text-[10px] text-muted-foreground mt-0.5">{sub}</p>}
     </div>
   );
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+          <h2 className="text-lg font-semibold text-foreground">Analytics</h2>
+          <p className="text-sm text-muted-foreground">Comprehensive organization insights & metrics</p>
+        </motion.div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="bg-surface-card border border-border rounded-xl p-5 animate-pulse">
+              <div className="flex items-start justify-between mb-3"><div className="w-10 h-10 rounded-lg shimmer" /><div className="w-12 h-5 rounded-full shimmer" /></div>
+              <div className="w-20 h-7 shimmer rounded mb-2" />
+              <div className="w-24 h-3 shimmer rounded" />
+            </motion.div>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }} className="bg-surface-card border border-border rounded-xl p-5 animate-pulse">
+              <div className="h-6 w-32 shimmer rounded mb-4" />
+              <div className="h-64 w-full shimmer rounded" />
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

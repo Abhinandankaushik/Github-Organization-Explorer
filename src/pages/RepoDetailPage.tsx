@@ -9,11 +9,37 @@ import { formatDistanceToNow } from 'date-fns';
 export default function RepoDetailPage() {
   const { repoName } = useParams();
   const navigate = useNavigate();
-  const { repos, healthScores, contributors, orgName } = useAppStore();
+  const { repos, healthScores, contributors, orgName, isLoading } = useAppStore();
 
   const repo = repos.find(r => r.name === repoName);
   const health = repo ? healthScores.get(repo.id) : undefined;
   const repoContribs = repoName ? contributors.get(repoName) || [] : [];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4 sm:space-y-6">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="animate-pulse">
+          <div className="h-8 w-24 shimmer rounded mb-4" />
+          <div className="space-y-3 mb-4"><div className="h-7 w-64 shimmer rounded" /><div className="h-4 w-80 shimmer rounded" /></div>
+        </motion.div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-surface-card border border-border rounded-lg sm:rounded-xl p-2 sm:p-4 text-center animate-pulse">
+              <div className="w-4 h-4 bg-primary/20 rounded mx-auto mb-1 sm:mb-2" />
+              <div className="h-6 w-12 shimmer rounded mx-auto mb-1" />
+              <div className="h-3 w-10 shimmer rounded mx-auto" />
+            </div>
+          ))}
+        </div>
+        <div className="bg-surface-card border border-border rounded-xl p-5 animate-pulse">
+          <div className="h-6 w-32 shimmer rounded mb-4" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (<div key={i} className="text-center"><div className="h-4 w-16 shimmer rounded mx-auto mb-2" /><div className="h-8 w-12 shimmer rounded mx-auto mb-1" /><div className="h-3 w-14 shimmer rounded mx-auto" /></div>))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!repo) {
     return (
