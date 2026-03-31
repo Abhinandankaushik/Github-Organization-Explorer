@@ -41,10 +41,10 @@ export default function SettingsPage() {
   const sizeMB = (estimatedSize / (1024 * 1024)).toFixed(2);
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-4 sm:space-y-6 max-w-2xl">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <h2 className="text-lg font-semibold text-foreground">Settings</h2>
-        <p className="text-sm text-muted-foreground">PAT management, cache controls, and storage</p>
+        <h2 className="text-lg sm:text-xl font-semibold text-foreground">Settings</h2>
+        <p className="text-xs sm:text-sm text-muted-foreground">PAT management, cache controls, and storage</p>
       </motion.div>
 
       {/* PAT Section */}

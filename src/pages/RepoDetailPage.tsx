@@ -34,34 +34,34 @@ export default function RepoDetailPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-        <Button variant="ghost" size="sm" onClick={() => navigate('/repositories')} className="mb-4 text-muted-foreground">
-          <ArrowLeft className="w-4 h-4 mr-1" /> Repositories
+        <Button variant="ghost" size="sm" onClick={() => navigate('/repositories')} className="mb-3 sm:mb-4 text-muted-foreground text-xs sm:text-sm">
+          <ArrowLeft className="w-4 h-4 mr-1" /> <span className="hidden sm:inline">Repositories</span>
         </Button>
         
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-semibold text-foreground">{repo.name}</h2>
-              {repo.archived && <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">Archived</span>}
-              {repo.fork && <span className="text-xs px-2 py-0.5 rounded bg-info/10 text-info">Fork</span>}
+        <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg sm:text-xl font-semibold text-foreground truncate">{repo.name}</h2>
+              {repo.archived && <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded bg-muted text-muted-foreground">Archived</span>}
+              {repo.fork && <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded bg-info/10 text-info">Fork</span>}
             </div>
-            {repo.description && <p className="text-sm text-muted-foreground mt-1">{repo.description}</p>}
+            {repo.description && <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">{repo.description}</p>}
             {repo.topics && repo.topics.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
+              <div className="flex flex-wrap gap-1 sm:gap-1.5 mt-2">
                 {repo.topics.map(t => (
-                  <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-mono">{t}</span>
+                  <span key={t} className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full bg-primary/10 text-primary font-mono line-clamp-1">{t}</span>
                 ))}
               </div>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             {health && <HealthBadge grade={health.grade} score={health.total} size="lg" />}
             <a href={repo.html_url} target="_blank" rel="noopener noreferrer">
-              <Button variant="ghost" size="sm" className="text-xs gap-1">
-                <ExternalLink className="w-3.5 h-3.5" /> GitHub
+              <Button variant="ghost" size="sm" className="text-xs gap-1 h-9">
+                <ExternalLink className="w-3.5 h-3.5" /> <span className="hidden sm:inline">GitHub</span>
               </Button>
             </a>
           </div>
@@ -69,17 +69,17 @@ export default function RepoDetailPage() {
       </motion.div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
         {stats.map(({ icon: Icon, label, value }) => (
           <motion.div
             key={label}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-surface-card border border-border rounded-xl p-4 text-center"
+            className="bg-surface-card border border-border rounded-lg sm:rounded-xl p-2 sm:p-4 text-center"
           >
-            <Icon className="w-4 h-4 text-primary mx-auto mb-1" />
-            <p className="text-lg font-semibold text-foreground font-mono">{value.toLocaleString()}</p>
-            <p className="text-[10px] text-muted-foreground">{label}</p>
+            <Icon className="w-3 sm:w-4 h-3 sm:h-4 text-primary mx-auto mb-0.5 sm:mb-1" />
+            <p className="text-sm sm:text-lg font-semibold text-foreground font-mono">{value.toLocaleString()}</p>
+            <p className="text-[9px] sm:text-[10px] text-muted-foreground">{label}</p>
           </motion.div>
         ))}
       </div>

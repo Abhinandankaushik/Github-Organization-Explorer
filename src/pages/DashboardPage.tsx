@@ -32,14 +32,14 @@ export default function DashboardPage() {
   const totalIssues = repos.reduce((s, r) => s + r.open_issues_count, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
-        <h2 className="text-lg font-semibold text-foreground">Dashboard</h2>
-        <p className="text-sm text-muted-foreground">Organization health at a glance</p>
+        <h2 className="text-lg sm:text-xl font-semibold text-foreground">Dashboard</h2>
+        <p className="text-xs sm:text-sm text-muted-foreground">Organization health at a glance</p>
       </motion.div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
@@ -66,7 +66,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
         <motion.div
           variants={cardVariants} custom={2} initial="hidden" animate="visible"
           className="bg-surface-card border border-border rounded-xl p-5 hover:border-primary/20 transition-all duration-300"

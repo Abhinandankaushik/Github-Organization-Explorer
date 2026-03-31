@@ -469,51 +469,51 @@ export default function NetworkPage() {
   }, [isFullscreen]);
 
   return (
-    <div className="space-y-4">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
-        <div>
+    <div className="space-y-3 sm:space-y-4">
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold text-foreground">Network Graph</h2>
-          <p className="text-sm text-muted-foreground">
-            {nodeCount} nodes · {edgeCount} connections — scroll to zoom, drag to pan/move nodes
+          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1 sm:line-clamp-none">
+            {nodeCount} nodes · {edgeCount} connections
           </p>
         </div>
         <div className="flex gap-1">
           <button onClick={() => setCamera(p => ({ ...p, zoom: Math.min(5, p.zoom * 1.3) }))}
-            className="p-2 rounded-lg bg-surface-card border border-border hover:border-primary/30 text-muted-foreground hover:text-foreground transition-all">
+            className="p-2 rounded-lg bg-surface-card border border-border hover:border-primary/30 text-muted-foreground hover:text-foreground transition-all h-8 w-8 flex items-center justify-center flex-shrink-0" title="Zoom In">
             <ZoomIn className="w-4 h-4" />
           </button>
           <button onClick={() => setCamera(p => ({ ...p, zoom: Math.max(0.1, p.zoom * 0.7) }))}
-            className="p-2 rounded-lg bg-surface-card border border-border hover:border-primary/30 text-muted-foreground hover:text-foreground transition-all">
+            className="p-2 rounded-lg bg-surface-card border border-border hover:border-primary/30 text-muted-foreground hover:text-foreground transition-all h-8 w-8 flex items-center justify-center flex-shrink-0" title="Zoom Out">
             <ZoomOut className="w-4 h-4" />
           </button>
           <button onClick={resetView}
-            className="p-2 rounded-lg bg-surface-card border border-border hover:border-primary/30 text-muted-foreground hover:text-foreground transition-all">
+            className="p-2 rounded-lg bg-surface-card border border-border hover:border-primary/30 text-muted-foreground hover:text-foreground transition-all h-8 w-8 flex items-center justify-center flex-shrink-0" title="Reset View">
             <Maximize2 className="w-4 h-4" />
           </button>
           <button onClick={toggleFullscreen}
-            className="p-2 rounded-lg bg-surface-card border border-border hover:border-primary/30 text-muted-foreground hover:text-foreground transition-all">
+            className="p-2 rounded-lg bg-surface-card border border-border hover:border-primary/30 text-muted-foreground hover:text-foreground transition-all h-8 w-8 flex items-center justify-center flex-shrink-0" title="Fullscreen">
             <Maximize className="w-4 h-4" />
           </button>
         </div>
       </motion.div>
 
       {/* Filters & Search */}
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-surface-card border border-border rounded-xl p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-surface-card border border-border rounded-xl p-2 sm:p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           {/* Search Bar */}
           <div className="lg:col-span-2 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none flex-shrink-0" />
             <Input
               type="text"
               placeholder="Search repos or contributors..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 text-xs sm:text-sm"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground flex-shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -523,8 +523,8 @@ export default function NetworkPage() {
           {/* Min Contributions Filter */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-foreground">Min Contributions</label>
-              <span className="text-xs text-muted-foreground font-mono">{minContributors}</span>
+              <label className="text-[11px] sm:text-xs font-semibold text-foreground">Min Contrib</label>
+              <span className="text-[11px] sm:text-xs text-muted-foreground font-mono">{minContributors}</span>
             </div>
             <input
               type="range"
@@ -539,8 +539,8 @@ export default function NetworkPage() {
           {/* Min Repos Filter */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-foreground">Min Repos</label>
-              <span className="text-xs text-muted-foreground font-mono">{minRepos}</span>
+              <label className="text-[11px] sm:text-xs font-semibold text-foreground">Min Repos</label>
+              <span className="text-[11px] sm:text-xs text-muted-foreground font-mono">{minRepos}</span>
             </div>
             <input
               type="range"
@@ -555,8 +555,8 @@ export default function NetworkPage() {
           {/* Max Contributors to Show */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-foreground">Show Contributors</label>
-              <span className="text-xs text-muted-foreground font-mono">{maxContributorsShow}</span>
+              <label className="text-[11px] sm:text-xs font-semibold text-foreground">Show Users</label>
+              <span className="text-[11px] sm:text-xs text-muted-foreground font-mono">{maxContributorsShow}</span>
             </div>
             <input
               type="range"
