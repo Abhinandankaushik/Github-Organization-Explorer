@@ -18,7 +18,7 @@ import {
 export function OrgManager() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { orgs, selectedOrgs, mode, orgName, addOrg, removeOrg, setOrgName, setSelectedOrgs, setMode, loadOrg, loadMultipleOrgs } = useAppStore();
+  const { orgs, selectedOrgs, mode, orgName, orgsData, addOrg, removeOrg, setOrgName, setSelectedOrgs, setMode, loadOrg, loadMultipleOrgs } = useAppStore();
   const [newOrgInput, setNewOrgInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
@@ -124,7 +124,46 @@ export function OrgManager() {
         }
       }
       
-      if (orgsToLoad.length > 0) {
+      // Check if we have cached data for >= 2 orgs
+      const orgsWithCachedData = Array.from(orgsData.keys());
+      const hasSufficientCachedData = orgsWithCachedData.length >= 2;
+      const hasEnoughListedOrgs = orgs.length >= 2;
+      
+      // If we have >= 2 orgs with cached data, use them and show notification
+      if (hasSufficientCachedData) {
+        setSelectedOrgs(orgsWithCachedData);
+        toast({
+          title: 'Starting comparison',
+          description: 'Loading comparison data for selected organizations...',
+          variant: 'default',
+        });
+      } else if (hasEnoughListedOrgs) {
+        // We have >= 2 orgs in the list but not all cached - show notification and start fetching
+        const orgsToCompare = orgs.slice(0, 2).map(o => o.name);
+        setSelectedOrgs(orgsToCompare);
+        toast({
+          title: 'Starting comparison',
+          description: 'Fetching comparison data for organizations...',
+          variant: 'default',
+        });
+        setIsLoading(true);
+        try {
+          await loadMultipleOrgs(orgsToCompare);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      } else {
+        // No cached data and < 2 selected - show error notification
+        toast({
+          title: 'Add more organizations',
+          description: 'Please add at least 2 organizations to use comparison mode.',
+          variant: 'default',
+        });
+        return;
+      }
+      
+      if (orgsToLoad.length > 0 && !hasSufficientCachedData) {
         setIsLoading(true);
         try {
           await loadMultipleOrgs(orgsToLoad);
@@ -142,11 +181,27 @@ export function OrgManager() {
     
     setSelectedOrgs(updated);
     
-    if (mode === 'multi' && updated.length > 0) {
-      // Load data in background without blocking UI
-      loadMultipleOrgs(updated).catch(() => {
-        // Silently fail - UI already updated
-      });
+    if (mode === 'multi') {
+      // Check if we have cached data for >= 2 orgs
+      const orgsWithCachedData = Array.from(orgsData.keys());
+      const hasSufficientCachedData = orgsWithCachedData.length >= 2;
+      
+      if (updated.length < 2 && !hasSufficientCachedData) {
+        // Less than 2 selected AND no cached data - show notification
+        if (updated.length === 1) {
+          toast({
+            title: 'Select another organization',
+            description: 'You need at least 2 organizations to use comparison mode.',
+            variant: 'default',
+          });
+        }
+      } else if (updated.length >= 2) {
+        // 2+ orgs selected, load data in background without blocking UI
+        loadMultipleOrgs(updated).catch(() => {
+          // Silently fail - UI already updated
+        });
+      }
+      // If < 2 selected but have sufficient cached data, don't load - just update state
     }
   };
 

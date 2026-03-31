@@ -42,9 +42,15 @@ export default function ComparisonPage() {
   useEffect(() => {
     if (isSetup) {
       navigate('/');
-    } else if (mode !== 'multi' || selectedOrgs.length === 0) {
-      // If multi-org, show notification and redirect to welcome
-      if (mode === 'multi' && selectedOrgs.length === 0) {
+    } else if (mode !== 'multi' || selectedOrgs.length < 2) {
+      // If multi-org but less than 2 orgs selected, show notification and redirect
+      if (mode === 'multi' && selectedOrgs.length > 0 && selectedOrgs.length < 2) {
+        toast({
+          title: 'Insufficient organizations',
+          description: 'Please add at least 2 organizations for comparison.',
+          variant: 'default',
+        });
+      } else if (mode === 'multi' && selectedOrgs.length === 0) {
         toast({
           title: 'No organizations',
           description: 'No organizations to analyse. Please add organizations to continue.',

@@ -216,7 +216,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   loadMultipleOrgs: async (orgNames: string[]) => {
-    const { pat } = get();
+    // Require at least 2 orgs for comparison
+    if (orgNames.length < 2) {
+      set({ error: 'Please select at least 2 organizations for comparison', isLoading: false });
+      return;
+    }
+
+    const { pat, orgsData: existingOrgsData } = get();
     set({ isLoading: true, error: null });
 
     try {
@@ -226,6 +232,15 @@ export const useAppStore = create<AppState>((set, get) => ({
       // Fetch data for EACH org separately (no combining)
       for (const orgName of orgNames) {
         try {
+          // Check if we already have cached data for this org
+          const cachedData = existingOrgsData.get(orgName);
+          if (cachedData) {
+            // Use cached data instead of fetching
+            orgsData.set(orgName, cachedData);
+            orgsWithData.push({ name: orgName, org: cachedData.org });
+            continue;
+          }
+
           const org = await githubFetch<GHOrg>(`/orgs/${orgName}`, pat || undefined);
           orgsWithData.push({ name: orgName, org });
 
