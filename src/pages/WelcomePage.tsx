@@ -61,6 +61,8 @@ export default function WelcomePage() {
       } else {
         setMode('single');
         setOrgName(org);
+        // Ensure single org is added to orgs list so it appears in multi-mode later
+        addOrg(org);
         await loadOrg(org);
       }
       navigate('/dashboard');

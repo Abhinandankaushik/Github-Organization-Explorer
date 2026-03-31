@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, X, Settings } from 'lucide-react';
+import { Plus, X, Settings, Check } from 'lucide-react';
 import { useAppStore } from '../store/app-store';
+import { useToast } from '../hooks/use-toast';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import {
@@ -14,9 +16,24 @@ import {
 } from './ui/dropdown-menu';
 
 export function OrgManager() {
-  const { orgs, selectedOrgs, mode, orgName, addOrg, removeOrg, setSelectedOrgs, setMode, loadMultipleOrgs } = useAppStore();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { orgs, selectedOrgs, mode, orgName, addOrg, removeOrg, setOrgName, setSelectedOrgs, setMode, loadOrg, loadMultipleOrgs } = useAppStore();
   const [newOrgInput, setNewOrgInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  // Auto-redirect when multi-org becomes empty
+  useEffect(() => {
+    if (mode === 'multi' && selectedOrgs.length === 0 && orgs.length > 0) {
+      toast({
+        title: 'No organizations selected',
+        description: 'Please select at least one organization to continue.',
+        variant: 'default',
+      });
+      navigate('/');
+    }
+  }, [mode, selectedOrgs.length, orgs.length, navigate, toast]);
 
   const handleAddOrg = async () => {
     if (!newOrgInput.trim()) return;
@@ -28,36 +45,46 @@ export function OrgManager() {
     if (mode === 'multi') {
       const updated = [...selectedOrgs, newOrgInput.trim()];
       setSelectedOrgs(updated);
-      setIsLoading(true);
-      try {
-        await loadMultipleOrgs(updated);
-      } finally {
-        setIsLoading(false);
-      }
+      // Load data in background without blocking UI
+      loadMultipleOrgs(updated).catch(() => {
+        // Silently fail - UI already updated with new org
+      });
     }
   };
 
-  const handleRemoveOrg = async (orgName: string) => {
-    // Check if this org is selected in multi mode before removing
-    const wasSelected = selectedOrgs.includes(orgName);
-    
-    removeOrg(orgName);
-    
-    // If we were in multi mode and the org was selected, reload data
-    if (mode === 'multi' && wasSelected && selectedOrgs.length > 1) {
-      // Remove the org from selected orgs
-      const updated = selectedOrgs.filter(o => o !== orgName);
-      setSelectedOrgs(updated);
+  const handleRemoveOrg = (orgName: string) => {
+    setIsRemoving(true);
+    try {
+      // Check if this org is selected in multi mode before removing
+      const wasSelected = selectedOrgs.includes(orgName);
       
-      if (updated.length > 0) {
-        setIsLoading(true);
-        try {
-          await loadMultipleOrgs(updated);
-        } finally {
-          setIsLoading(false);
+      removeOrg(orgName);
+      
+      // If we were in multi mode and the org was selected, reload data in background
+      if (mode === 'multi' && wasSelected && selectedOrgs.length > 1) {
+        // Remove the org from selected orgs
+        const updated = selectedOrgs.filter(o => o !== orgName);
+        setSelectedOrgs(updated);
+        
+        if (updated.length > 0) {
+          // Load data in background without blocking UI
+          loadMultipleOrgs(updated).catch(() => {
+            // Silently fail - UI already updated with removal
+          });
         }
       }
+    } finally {
+      setIsRemoving(false);
     }
+  };
+
+  // Handle selecting a single org - instantly reload its data
+  const handleSelectSingleOrg = (newOrgName: string) => {
+    setOrgName(newOrgName);
+    // Load new org's data in background
+    loadOrg(newOrgName).catch(() => {
+      // Silently fail - UI already updated with new org
+    });
   };
 
   const handleToggleMode = async (newMode: 'single' | 'multi') => {
@@ -90,7 +117,7 @@ export function OrgManager() {
     }
   };
 
-  const handleOrgSelect = async (orgName: string, isSelected: boolean) => {
+  const handleOrgSelect = (orgName: string, isSelected: boolean) => {
     const updated = isSelected
       ? [...selectedOrgs, orgName]
       : selectedOrgs.filter(o => o !== orgName);
@@ -98,12 +125,10 @@ export function OrgManager() {
     setSelectedOrgs(updated);
     
     if (mode === 'multi' && updated.length > 0) {
-      setIsLoading(true);
-      try {
-        await loadMultipleOrgs(updated);
-      } finally {
-        setIsLoading(false);
-      }
+      // Load data in background without blocking UI
+      loadMultipleOrgs(updated).catch(() => {
+        // Silently fail - UI already updated
+      });
     }
   };
 
@@ -153,7 +178,7 @@ export function OrgManager() {
           <Button
             size="sm"
             onClick={handleAddOrg}
-            disabled={!newOrgInput.trim() || isLoading}
+            disabled={!newOrgInput.trim()}
             className="px-3"
           >
             <Plus className="w-4 h-4" />
@@ -181,7 +206,6 @@ export function OrgManager() {
                       key={org.name}
                       checked={selectedOrgs.includes(org.name)}
                       onCheckedChange={(checked) => handleOrgSelect(org.name, checked)}
-                      disabled={isLoading}
                     >
                       {org.name}
                     </DropdownMenuCheckboxItem>
@@ -198,7 +222,12 @@ export function OrgManager() {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
-                className="flex items-center justify-between p-2 rounded bg-surface-secondary border border-border/50 hover:border-border transition-colors"
+                className={`flex items-center justify-between p-2 rounded border transition-colors cursor-pointer ${
+                  mode === 'single' && orgName === org.name
+                    ? 'bg-primary/10 border-primary hover:bg-primary/20'
+                    : 'bg-surface-secondary border-border/50 hover:border-border'
+                }`}
+                onClick={() => mode === 'single' && handleSelectSingleOrg(org.name)}
               >
                 <div className="flex-1">
                   <p className="text-sm font-medium">{org.name}</p>
@@ -207,16 +236,26 @@ export function OrgManager() {
                       {selectedOrgs.includes(org.name) ? 'Selected' : 'Unselected'}
                     </p>
                   )}
+                  {mode === 'single' && orgName === org.name && (
+                    <p className="text-xs text-primary font-semibold">Current Org</p>
+                  )}
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleRemoveOrg(org.name)}
-                  disabled={isLoading}
-                  className="h-6 px-2 text-destructive hover:text-destructive"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+                {mode === 'single' && orgName === org.name ? (
+                  <Check className="w-4 h-4 text-primary" />
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveOrg(org.name);
+                    }}
+                    disabled={isRemoving}
+                    className="h-6 px-2 text-destructive hover:text-destructive"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
               </motion.div>
             ))}
           </div>
@@ -224,6 +263,11 @@ export function OrgManager() {
           {mode === 'multi' && selectedOrgs.length > 0 && (
             <p className="text-xs text-muted-foreground">
               Showing data from {selectedOrgs.length} organization{selectedOrgs.length !== 1 ? 's' : ''}
+            </p>
+          )}
+          {mode === 'single' && orgName && (
+            <p className="text-xs text-muted-foreground">
+              Currently viewing: <span className="font-semibold text-foreground">{orgName}</span>
             </p>
           )}
         </div>
