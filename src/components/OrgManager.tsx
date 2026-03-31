@@ -38,12 +38,24 @@ export function OrgManager() {
   const handleAddOrg = async () => {
     if (!newOrgInput.trim()) return;
     
-    addOrg(newOrgInput.trim());
+    const trimmedOrg = newOrgInput.trim();
+    
+    // Check for duplicates in multi mode
+    if (mode === 'multi' && selectedOrgs.includes(trimmedOrg)) {
+      toast({
+        title: 'Organization already added',
+        description: `${trimmedOrg} is already in your selected organizations.`,
+        variant: 'default',
+      });
+      return;
+    }
+    
+    addOrg(trimmedOrg);
     setNewOrgInput('');
     
     // Auto-select the newly added org if in multi mode
     if (mode === 'multi') {
-      const updated = [...selectedOrgs, newOrgInput.trim()];
+      const updated = [...selectedOrgs, trimmedOrg];
       setSelectedOrgs(updated);
       // Load data in background without blocking UI
       loadMultipleOrgs(updated).catch(() => {
@@ -79,12 +91,18 @@ export function OrgManager() {
   };
 
   // Handle selecting a single org - instantly reload its data
-  const handleSelectSingleOrg = (newOrgName: string) => {
+  const handleSelectSingleOrg = async (newOrgName: string) => {
     setOrgName(newOrgName);
-    // Load new org's data in background
-    loadOrg(newOrgName).catch(() => {
-      // Silently fail - UI already updated with new org
-    });
+    // Load new org's data with proper error handling
+    try {
+      await loadOrg(newOrgName);
+    } catch (err) {
+      toast({
+        title: 'Failed to load organization',
+        description: err instanceof Error ? err.message : 'Could not fetch organization data',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleToggleMode = async (newMode: 'single' | 'multi') => {

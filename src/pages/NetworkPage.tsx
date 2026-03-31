@@ -23,7 +23,7 @@ type GraphNode = RepoNode | ContribNode;
 interface Edge { from: string; to: string; weight: number; repoName: string; colorIdx: number }
 
 export default function NetworkPage() {
-  const { org, repos, contributors, allContributors, isLoading, loadOrg } = useAppStore();
+  const { org, repos, contributors, allContributors, isLoading, orgName, loadOrg } = useAppStore();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
@@ -62,10 +62,10 @@ export default function NetworkPage() {
 
   // Load org data if not loaded yet
   useEffect(() => {
-    if (!org) {
-      loadOrg();
+    if (!org || org.login !== orgName) {
+      loadOrg(orgName);
     }
-  }, [org, loadOrg]);
+  }, [org, orgName, loadOrg]);
 
   // Prevent scroll-to-top when zooming on mobile
   useEffect(() => {

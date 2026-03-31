@@ -99,10 +99,10 @@ export default function ContributorsPage() {
 
   // Load org data if not loaded yet
   useEffect(() => {
-    if (!org) {
-      loadOrg();
+    if (!org || org.login !== orgName) {
+      loadOrg(orgName);
     }
-  }, [org, loadOrg]);
+  }, [org, orgName, loadOrg]);
 
   // Show loading skeleton while fetching data
   if (isLoading) {

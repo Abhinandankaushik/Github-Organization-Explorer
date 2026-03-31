@@ -14,10 +14,10 @@ export default function RepoDetailPage() {
 
   // Load org data if not loaded yet
   useEffect(() => {
-    if (!org) {
-      loadOrg();
+    if (!org || org.login !== orgName) {
+      loadOrg(orgName);
     }
-  }, [org, loadOrg]);
+  }, [org, orgName, loadOrg]);
 
   const repo = repos.find(r => r.name === repoName);
   const health = repo ? healthScores.get(repo.id) : undefined;

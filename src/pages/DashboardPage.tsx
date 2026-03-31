@@ -18,14 +18,14 @@ const cardVariants = {
 };
 
 export default function DashboardPage() {
-  const { org, repos, allContributors, isLoading, isSetup, mode, selectedOrgs, loadOrg } = useAppStore();
+  const { org, repos, allContributors, isLoading, isSetup, mode, selectedOrgs, orgName, loadOrg } = useAppStore();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (isSetup) navigate('/');
     else if (mode === 'multi') navigate('/comparison');
-    else if (!org) loadOrg();
-  }, [isSetup, org, mode, selectedOrgs]);
+    else if (!org || org.login !== orgName) loadOrg(orgName);  // Reload when org changes
+  }, [isSetup, org, orgName, mode, selectedOrgs, loadOrg, navigate]);
 
   const totalStars = repos.reduce((s, r) => s + r.stargazers_count, 0);
   const totalForks = repos.reduce((s, r) => s + r.forks_count, 0);

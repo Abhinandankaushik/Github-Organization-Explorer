@@ -134,6 +134,16 @@ export const useAppStore = create<AppState>((set, get) => ({
     const orgName = orgToLoad || currentOrg;
     if (!orgName) return;
 
+    // Clear old org's cache for all API endpoints
+    const cacheKeysToDelete: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('cache:') || key.startsWith('etag:'))) {
+        cacheKeysToDelete.push(key);
+      }
+    }
+    cacheKeysToDelete.forEach(key => localStorage.removeItem(key));
+
     set({ isLoading: true, error: null });
     
     try {

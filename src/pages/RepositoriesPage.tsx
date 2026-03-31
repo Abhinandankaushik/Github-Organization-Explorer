@@ -12,7 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 type SortKey = 'pushed_at' | 'stargazers_count' | 'forks_count' | 'open_issues_count' | 'name';
 
 export default function RepositoriesPage() {
-  const { org, repos, healthScores, languages, isLoading, loadOrg } = useAppStore();
+  const { org, repos, healthScores, languages, isLoading, orgName, loadOrg } = useAppStore();
   const navigate = useNavigate();
   
   const [search, setSearch] = useState('');
@@ -53,10 +53,10 @@ export default function RepositoriesPage() {
 
   // Load org data if not loaded yet
   useEffect(() => {
-    if (!org) {
-      loadOrg();
+    if (!org || org.login !== orgName) {
+      loadOrg(orgName);
     }
-  }, [org, loadOrg]);
+  }, [org, orgName, loadOrg]);
 
   // Show loading skeleton while fetching data
   if (isLoading) {

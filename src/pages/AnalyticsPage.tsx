@@ -31,10 +31,10 @@ export default function AnalyticsPage() {
 
   // Load org data if not loaded yet
   useEffect(() => {
-    if (!org) {
-      loadOrg();
+    if (!org || org.login !== orgName) {
+      loadOrg(orgName);
     }
-  }, [org, loadOrg]);
+  }, [org, orgName, loadOrg]);
 
   // ========== 1. HIGH-LEVEL ORG OVERVIEW ==========
   const orgOverview = useMemo(() => {
